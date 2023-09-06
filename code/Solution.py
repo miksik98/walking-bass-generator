@@ -1,7 +1,7 @@
 from music21 import stream, meter, key, clef
 from music21.tie import Tie
 
-from model.Note import Note
+from Note import Note
 
 
 class Solution:

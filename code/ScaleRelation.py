@@ -1,4 +1,4 @@
-from model.Scale import scales
+from Scale import scales
 
 
 class ScaleRelation:

@@ -1,5 +1,5 @@
-from model.Chord import Chord
-from model.ScaleRelation import ScaleRelation
+from Chord import Chord
+from ScaleRelation import ScaleRelation
 
 
 class PolyChord(ScaleRelation):

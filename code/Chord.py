@@ -1,6 +1,6 @@
 from music21.harmony import ChordSymbol
 from Music21Helper import music21_helper
-from model.ScaleRelation import ScaleRelation
+from ScaleRelation import ScaleRelation
 
 
 class Chord(ScaleRelation):
@@ -74,11 +74,11 @@ class Chord(ScaleRelation):
 
     def basic_components(self):
         return [element for element in
-                [self.root(), self.second, self.third, self.fourth, self.fifth, self.sixth, self.seventh] if
+                [self.root(), self.second, self.third, self.fourth, self.fifth, self.sixth] if
                 element is not None]
 
     def color_tones(self):
-        return [element for element in [self.ninth, self.eleventh, self.thirteenth] if element is not None]
+        return [element for element in [self.ninth, self.eleventh, self.thirteenth, self.seventh] if element is not None]
 
     def tritone_substitute_components(self):
         return [element + 6 if element < 6 else element - 6 for element in self.basic_components()]
@@ -101,8 +101,11 @@ class Chord(ScaleRelation):
     def is_backdoor_dominant_relation_with(self, chord):
         return self.root() + 2 == chord.root() if self.root() < 10 else self.root() - 10 == chord.root()
 
+    def is_dominant(self):
+        return self.has_minor_seventh() and (self.is_major() or self.is_sus())
+
     def is_in_dominant_relation_with(self, chord):
-        if self.has_minor_seventh() and (self.is_major() or self.is_sus()):
+        if self.is_dominant():
             classic = self.is_classic_dominant_relation_with(chord)
             substitute = self.is_substitute_dominant_relation_with(chord)
             deceptive = self.is_deceptive_dominant_relation_with(chord)
@@ -135,7 +138,7 @@ class Chord(ScaleRelation):
         return self.symbol
 
 
-print(Chord("C7b5b9b13").thirteenth)
+# print(Chord("C7b5b9b13").thirteenth)
 
 ## chord definitions
 # print(Chord("C7")) # dominant

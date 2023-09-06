@@ -1,6 +1,6 @@
 import music21
 
-from model.Chord import Chord
+from Chord import Chord
 
 
 class Note:
@@ -10,5 +10,8 @@ class Note:
         self.chord = chord
         self.anticipates_next = anticipates_next
         self.on_beat = on_beat
+
+    def __str__(self):
+        return f"{self.note.pitch}"
 
 
