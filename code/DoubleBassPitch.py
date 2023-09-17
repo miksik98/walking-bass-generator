@@ -1,5 +1,3 @@
-from music21.pitch import Pitch
-
 g_string = 55
 d_string = 50
 a_string = 45

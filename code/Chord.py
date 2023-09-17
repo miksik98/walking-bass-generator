@@ -12,14 +12,6 @@ class Chord(ScaleRelation):
         if len(symbol) > 1 and symbol[1] == 'b':
             symbol = symbol[0] + '-' + symbol[2:]
 
-        # if 'sus' in symbol:
-        #     self._pitches = list(map(lambda x: x.pitchClass, symbol.pitches))
-        #     self.bass = symbol.bass().pitchClass
-        #     self._root = symbol.root().pitchClass
-        #     self.third = music21_helper.to_pitch_class(symbol.third)
-        #     self.fifth = music21_helper.to_pitch_class(symbol.fifth)
-        #     self.seventh = music21_helper.to_pitch_class(symbol.seventh)
-
         symbol = ChordSymbol(symbol)
         self._pitches = list(map(lambda x: x.pitchClass, symbol.pitches))
         self.bass = symbol.bass().pitchClass
@@ -136,24 +128,3 @@ class Chord(ScaleRelation):
 
     def __str__(self):
         return self.symbol
-
-
-# print(Chord("C7b5b9b13").thirteenth)
-
-## chord definitions
-# print(Chord("C7")) # dominant
-# print(Chord("CM7")) # major
-# print(Chord("Cm7")) # minor
-# print(Chord("Cdim")) # diminished
-# print(Chord("C+")) # augmented
-# print(Chord("Csus4")) # sus without color tones
-# print(Chord("C7#5#9#11b13")) # more complicated dominant
-# print(Chord("Cm6")) # minor with 6
-# print(Chord("Cm13")) # minor
-# print(Chord("Cdim7")) # diminished chord
-# print(Chord("Cm7b5")) # half-diminished
-# print(Chord("C6")) # some major
-# print(Chord("D/C")) # slash chords
-# print(Chord("Bb7")) # flat chords
-# print(Chord("F#7")) # sharp chords
-# print(Chord("F7sus").pitches())# sus with color tones

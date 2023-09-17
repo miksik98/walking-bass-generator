@@ -39,5 +39,3 @@ class ChooseScaleAlgorithm:
 
 
 choose_scale_algorithm = ChooseScaleAlgorithm()
-
-# print(choose_scale_algorithm.choose(Chord("Gm7"), Chord("Db7"), Chord("FM7")))

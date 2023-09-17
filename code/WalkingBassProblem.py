@@ -1,29 +1,37 @@
 import random
 from fractions import Fraction
 
-from GeneticAlgorithm import GeneticAlgorithm
-from Mutator import Mutator, ChangeOctaveMutator
 from ChooseScaleAlgorithm import choose_scale_algorithm
 from Chord import Chord
+from GeneticAlgorithm import GeneticAlgorithm
+from Mutator import Mutator, OneOctaveMutator, PitchMutation, ChangeOctaveMutator, IntroduceFlagoletOrOpenString, \
+    IntroduceTriplet
+from NarrowContextRules import narrow_context_rules
 from NoteGenerator import note_generator
 from Solution import Solution
-from NarrowContextRules import narrow_context_rules
-
 from WideRangeContextRules import wide_range_context_rules
+import matplotlib.pyplot as plt
+from datetime import datetime
+
+from Note import Note
+
 
 class WalkingBassProblem(GeneticAlgorithm):
     def __init__(self, population_size, max_iteration, max_stale_iterations, crossover_probability,
-                 mutators: list[Mutator], offspringPercentage, input_chords: list[Chord]):
+                 mutators: list[Mutator], offspringPercentage, input_chords: list[Chord], mutation_probability,
+                 repair_operators: list[Mutator]):
         super().__init__(population_size, max_iteration, max_stale_iterations, crossover_probability, mutators,
                          offspringPercentage)
         self.input_chords = input_chords
         self.scales = []
+        self.mutation_probability = mutation_probability
+        self.repair_operators = repair_operators
 
     def generate_scale_for_id(self, chord_id: int):
         actual_chord = self.input_chords[chord_id]
 
         prev_chord = None
-        for i in range(chord_id-1, -1, -1):
+        for i in range(chord_id - 1, -1, -1):
             if self.input_chords[i] != actual_chord:
                 prev_chord = self.input_chords[i]
                 break
@@ -41,8 +49,8 @@ class WalkingBassProblem(GeneticAlgorithm):
             notes = []
             for i, chord in enumerate(self.input_chords):
                 if len(self.scales) == i:
-                    if i > 0 and self.input_chords[i-1] == chord:
-                        scale = self.scales[i-1]
+                    if i > 0 and self.input_chords[i - 1] == chord:
+                        scale = self.scales[i - 1]
                     else:
                         scale = self.generate_scale_for_id(i)
                     self.scales.append(scale)
@@ -50,8 +58,9 @@ class WalkingBassProblem(GeneticAlgorithm):
                     scale = self.scales[i]
                 possible_notes = note_generator.generate(i % 4 == 0, chord, scale,
                                                          (i % 4) % 2 == 0,
-                                                         Fraction(1, 1), False)
-                note = random.choices([n.note for n in possible_notes], weights=[n.priority for n in possible_notes], k=1)[0]
+                                                         Fraction(3, 3), False)
+                note = \
+                random.choices([n.note for n in possible_notes], weights=[n.priority for n in possible_notes], k=1)[0]
                 notes.append(note)
             return Solution(notes)
 
@@ -59,16 +68,30 @@ class WalkingBassProblem(GeneticAlgorithm):
 
     def mutate(self, individual):
         notes = individual.notes
-        result = []
-        for chromosome_id in range(len(notes)):
-            chromosome = notes[chromosome_id]
+        result_after_mutation = []
+        chromosome_id = 0
+        after_mutation_id = 0
+        while chromosome_id < len(notes):
+            chromosomes = [notes[chromosome_id]]
             for mutator in self.mutators:
-                chromosome = mutator.mutate(result[:chromosome_id] + notes[chromosome_id:], chromosome_id)
-            result.append(chromosome)
-        return Solution(result)
+                if random.random() < self.mutation_probability:
+                    chromosomes = mutator.mutate(result_after_mutation[:after_mutation_id] + notes[chromosome_id:],
+                                                after_mutation_id)
+                    after_mutation_id += len(chromosomes) - 1
+            result_after_mutation += chromosomes
+            chromosome_id += 1
+            after_mutation_id += 1
+        result_after_repair = []
+        for chromosome_id in range(len(result_after_mutation)):
+            chromosomes = [result_after_mutation[chromosome_id]]
+            for mutator in self.repair_operators:
+                chromosomes = mutator.mutate(result_after_repair[:chromosome_id] + result_after_mutation[chromosome_id:],
+                                            chromosome_id)
+            result_after_repair += chromosomes
+        return Solution(result_after_repair)
 
     def fitness_score(self, individual):
-        result = 0
+        result = 0.0
         for rule in wide_range_context_rules:
             result += rule(individual).check()
         for rule in narrow_context_rules:
@@ -91,7 +114,9 @@ class WalkingBassProblem(GeneticAlgorithm):
 
         def random_wheel(_population, _scores, _size):
             total_fitness = sum(_scores)
-            probabilities = [score / total_fitness for score in _scores]
+            probabilities = [total_fitness - score for score in _scores]
+            if sum(probabilities) == 0.0:
+                return random.choices(_population, k=_size)
             parents = random.choices(_population, weights=probabilities, k=_size)
             return parents
 
@@ -101,22 +126,23 @@ class WalkingBassProblem(GeneticAlgorithm):
         if random.random() < self.crossover_probability:
             crossover_points = [i for i in range(0, len(self.input_chords), 4) if
                                 i != 0 and i != len(self.input_chords) - 1]
-            crossover_point = random.choice(crossover_points)
+            crossover_point = Fraction(random.choice(crossover_points))
 
-            parent1_crossover_point = Fraction()
-            parent2_crossover_point = Fraction()
-            acc = 0
+            parent1_crossover_point = None
+            parent2_crossover_point = None
+            acc = Fraction(0)
+            eps = 0.0001
             for i, note in enumerate(parent1.notes):
-                acc += note.note.quarterLength
-                if acc == crossover_point:
+                if abs(crossover_point + eps) > acc > abs(crossover_point - eps):
                     parent1_crossover_point = i
                     break
-            acc = 0
-            for i, note in enumerate(parent2.notes):
                 acc += note.note.quarterLength
-                if acc == crossover_point:
+            acc = Fraction(0)
+            for i, note in enumerate(parent2.notes):
+                if abs(crossover_point + eps) > acc > abs(crossover_point - eps):
                     parent2_crossover_point = i
                     break
+                acc += note.note.quarterLength
 
             child1 = parent1.notes[:parent1_crossover_point] + parent2.notes[parent2_crossover_point:]
             child2 = parent2.notes[:parent2_crossover_point] + parent1.notes[parent1_crossover_point:]
@@ -125,41 +151,80 @@ class WalkingBassProblem(GeneticAlgorithm):
             return parent1, parent2
 
 
-# chords = [Chord("Dm7"), Chord("Dm7"), Chord("G7"), Chord("G7"), Chord("CM7"), Chord("CM7"), Chord("A7"), Chord("A7"),
-#           Chord("Dm7"), Chord("Dm7"), Chord("G7"), Chord("G7"), Chord("CM7"), Chord("CM7"), Chord("CM7"), Chord("CM7")]
+chords = []
 
-chords = [Chord("F7"), Chord("F7"), Chord("F7"), Chord("F7"), Chord("Bb7"), Chord("Bb7"), Chord("Bb7"), Chord("Bb7"),
-          Chord("F7"), Chord("F7"), Chord("F7"), Chord("F7"), Chord("Cm7"), Chord("Cm7"), Chord("F7"), Chord("F7"),
-          Chord("Bb7"), Chord("Bb7"), Chord("Bb7"), Chord("Bb7"), Chord("Bo"), Chord("Bo"), Chord("Bo"), Chord("Bo"),
-          Chord("F7"), Chord("F7"), Chord("F7"), Chord("F7"), Chord("Am7b5"), Chord("Am7b5"), Chord("D7"), Chord("D7"),
-          Chord("Gm7"), Chord("Gm7"), Chord("Gm7"), Chord("Gm7"), Chord("C7"), Chord("C7"), Chord("C7"), Chord("C7"),
-          Chord("F7"), Chord("F7"), Chord("Dm7"), Chord("Dm7"), Chord("Gm7"), Chord("Gm7"), Chord("C7"), Chord("C7")]
+blues = "../tasks/blues_f.txt"
+coltrane = "../tasks/26-2.txt"
+so_what = "../tasks/so_what.txt"
+time_remembered = "../tasks/time_remembered.txt"
+yes_or_no = "../tasks/yes_or_no.txt"
 
-# chords = [Chord("Dm7"), Chord("Dm7"), Chord("Dm7"), Chord("Dm7"), Chord("Dm7"), Chord("Dm7"), Chord("Dm7"),Chord("Dm7")]
+num_of_iterations = 10
+file = blues
+with open(file, "r") as f:
+    for line in f:
+        bars = list(map(lambda x: x.strip().split(" "), line.split("|")))
+        for bar in bars:
+            if len(bar) == 1:
+                chords += [Chord(bar[0]) for _ in range(4)]
+            elif len(bar) == 2:
+                for i in range(2):
+                    chords += [Chord(bar[i]) for _ in range(2)]
+            elif len(bar) == 4:
+                for i in range(4):
+                    chords += Chord(bar[i])
+            else:
+                raise(NotImplementedError(f"unknown bar {bar}"))
 
 mutators = [
-    ChangeOctaveMutator(0.5)
+    PitchMutation(0.5),
+    IntroduceFlagoletOrOpenString(0.05),
+    ChangeOctaveMutator(0.1),
+    IntroduceTriplet(0.05),
 ]
 
-problem = WalkingBassProblem(
-    population_size=200,
-    max_iteration=2000,
-    max_stale_iterations=100,
-    crossover_probability=0.4,
-    mutators=mutators,
-    offspringPercentage=0.6,
-    input_chords=chords
-)
+repair_operators = [
+    OneOctaveMutator(1.0)
+]
 
-result = problem.run()
+for _ in range(num_of_iterations):
 
-print(result[3][-1])
-print(problem.scales)
+    problem = WalkingBassProblem(
+        population_size=200,
+        max_iteration=1,
+        max_stale_iterations=50,
+        crossover_probability=0.2,
+        mutators=mutators,
+        offspringPercentage=0.6,
+        input_chords=chords,
+        mutation_probability=0.4,
+        repair_operators=repair_operators
+    )
 
-solution = result[1]
-print(problem.fitness_score(solution))
+    result = problem.run()
 
-solution.print()
-# for n in solution.notes:
-#     print(n)
-# print(problem[0])
+    solution = result[1]
+
+    notes = []
+    for i, n in enumerate(solution.notes):
+        if i < len(solution.notes) - 1 and n.note.pitch.midi == solution.notes[i+1].note.pitch.midi and solution.notes[i+1].is_first:
+            notes.append(Note(n.note, n.chord, True, n.on_beat, n.scale, n.is_first))
+        else:
+            notes.append(n)
+
+    solution = Solution(notes)
+    fitness = problem.fitness_score(solution)
+    task_name = file.split("/")[-1][:-4]
+    now = datetime.now()
+    dt_string = now.strftime("%d_%m_%Y_%H_%M_%S")
+
+    result_file_name = f"../results/{task_name}_{int(fitness)}_fitness_{dt_string}.mxl"
+
+
+
+    # plt.plot(result[3])
+    # plt.ylabel('wartość kary')
+    # plt.xlabel('numer epoki')
+    # plt.savefig('example_fitness.pdf')
+
+    solution.print(result_file_name)

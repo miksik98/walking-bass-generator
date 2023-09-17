@@ -101,8 +101,6 @@ dominant_suspend = Scale([0, 2, 5, 7, 9, 10], "dominant suspend", 2, ScaleCharac
 
 enigmatic = Scale([0, 1, 4, 6, 8, 10, 11], "enigmatic", 2, ScaleCharacter.DOMINANT)
 
-## TODO blues scales?
-
 scales = [ionian, dorian, phrygian, lydian, mixolydian, aeloian, locrian,
           melodic_minor, dorian_b2, lydian_aug, lydian_dominant, mixolydian_b6, locrian_sharp2, altered,
           whole_tone, whole_half, half_whole, pentatonic_major, pentatonic_minor, harmonic_diminished,

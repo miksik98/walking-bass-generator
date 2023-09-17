@@ -21,7 +21,7 @@ class NoteWithPriority:
 class NoteGenerator:
 
     def _generate_note_from_pitchClass(self, pitchClass: int, chord: Chord, on_beat: bool, length: Fraction,
-                                       is_anticipated: bool, priority: int) -> list[NoteWithPriority]:
+                                       anticipates_next: bool, priority: int, scale: Scale, is_first: bool) -> list[NoteWithPriority]:
         i = 0
         result = []
         while 12 * i + pitchClass <= highest_pitch:
@@ -29,15 +29,16 @@ class NoteGenerator:
             if actual_pitch >= lowest_pitch:
                 note = music21.note.Note(actual_pitch)
                 note.quarterLength = length
-                result.append(NoteWithPriority(Note(note, chord, is_anticipated, on_beat), priority))
+                result.append(NoteWithPriority(Note(note, chord, anticipates_next, on_beat, scale, is_first), priority))
             i += 1
         return result
 
     def generate(self, is_first: bool, chord: Chord, scale: Scale, on_beat: bool, length: Fraction,
-                 is_anticipated: bool) -> list[
+                 anticipates_next: bool, as_mutation: bool = False) -> list[
         NoteWithPriority]:
         result = []
         scale_components = []
+        root_priority = 45 if as_mutation else 300
         for scale_comp in list(
                 map(lambda x: x + chord.root() if x + chord.root() < 12 else x + chord.root() - 12, scale.schema)):
             if scale_comp not in chord.basic_components() + chord.color_tones():
@@ -48,43 +49,43 @@ class NoteGenerator:
         if is_first:
             for component in chord.basic_components():
                 if component == chord.root():
-                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 300)
+                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, root_priority, scale, is_first)
                 else:
-                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 30)
+                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 30, scale, is_first)
             for component in chord.color_tones():
-                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 3)
+                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 3, scale, is_first)
             for component in scale_components:
-                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 2)
+                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 2, scale, is_first)
             for component in other_components:
-                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 1)
+                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 1, scale, is_first)
         elif on_beat:
             for component in chord.basic_components():
                 if component == chord.root():
-                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 200)
+                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, (root_priority * 2) / 3, scale, is_first)
                 else:
-                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 30)
+                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 30, scale, is_first)
             for component in chord.color_tones():
-                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 2)
+                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 2, scale, is_first)
             for component in scale_components:
-                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 5)
+                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 5, scale, is_first)
             for component in other_components:
-                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 1)
+                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 1, scale, is_first)
         elif length < Fraction(1):
             for component in [i for i in range(12)]:
                 result += (
-                    self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 1))
+                    self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 1, scale, is_first))
         else:
             for component in chord.basic_components():
                 if component == chord.root():
-                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 30)
+                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 30, scale, is_first)
                 else:
-                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 15)
+                    result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 15, scale, is_first)
             for component in chord.color_tones():
-                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 2)
+                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 2, scale, is_first)
             for component in scale_components:
-                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 5)
+                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 5, scale, is_first)
             for component in other_components:
-                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, is_anticipated, 1)
+                result += self._generate_note_from_pitchClass(component, chord, on_beat, length, anticipates_next, 1, scale, is_first)
         return result
 
 
